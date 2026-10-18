@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeoShield | Network Traffic Intelligence Platform</title>
+  <link rel="stylesheet" href="{{url_for('static', filename='NetworkTrafficAnalyser.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <audio id="alert-sound" src="{{ url_for('static', filename='sounds/warning.mp3') }}" preload="auto"></audio>
+  <div class="hamburger" id="hamburger">
+    <i class="fas fa-bars"></i>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fas fa-shield-alt"></i>
+        <span>NeoShield</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-view="analytics">
+        <i class="fas fa-chart-line"></i>
+        <span>Analytics</span>
+      </a>
+      <a href="#" class="nav-item" data-view="flows">
+        <i class="fas fa-project-diagram"></i>
+        <span>Flow Analysis</span>
+      </a>
+      <a href="#" class="nav-item" data-view="packets">
+        <i class="fas fa-network-wired"></i>
+        <span>Packet Inspector</span>
+      </a>
+      <a href="#" class="nav-item" data-view="threats">
+        <i class="fas fa-shield-virus"></i>
+        <span>Threat Intel</span>
+      </a>
+      <a href="#" class="nav-item" data-view="geo">
+      <i class="fas fa-globe"></i>
+      <span>Geo Intelligence</span>
+    </a>
+    <a href="#" class="nav-item" data-view="alerts">
+    <i class="fas fa-bell"></i>
+    <span>Alerts</span>
+    </a>
+    <a href="#" class="nav-item" data-view="cases">
+    <i class="fas fa-folder-open"></i>
+    <span>Cases</span>
+    </a>
+    <a href="#" class="nav-item" data-view="ioc">
+    <i class="fas fa-list-ul"></i>
+    <span>IOC Management</span>
+    </a>
+    <a href="#" class="nav-item" data-view="rules">
+    <i class="fas fa-gavel"></i>
+    <span>Detection Rules</span>
+    </a>
+    <a href="#" class="nav-item" data-view="automation">
+    <i class="fas fa-robot"></i>
+    <span>Automation</span>
+    </a>
+    <a href="#" class="nav-item" data-view="investigation">
+    <i class="fas fa-chart-simple"></i>
+    <span>Investigation Graph</span>
+    </a>
+    <a href="#" class="nav-item" data-view="hunting">
+      <i class="fas fa-search"></i>
+      <span>Threat Hunting</span>
+    </a>
+    <a href="#" class="nav-item" data-view="mitre">
+    <i class="fas fa-flag"></i>
+    <span>MITRE ATT&CK</span>
+  </a>
+  <a href="#" class="nav-item" data-view="assets">
+    <i class="fas fa-server"></i>
+    <span>Asset Inventory</span>
+</a>
+  <a href="#" class="nav-item" data-view="ueba">
+      <i class="fas fa-user-astronaut"></i>
+      <span>UEBA</span>
+  </a>
+  
+  <a href="#" class="nav-item" data-view="priority">
+    <i class="fas fa-sort-amount-down"></i>
+    <span>Priority Queue</span>
+  </a>
+
+  <a href="#" class="nav-item" data-view="incidents">
+    <i class="fas fa-fire"></i>
+    <span>Incidents</span>
+</a>
+
+<a href="#" class="nav-item" data-view="executive">
+    <i class ="fas fa-clipboard-check"></i>
+    <span>Executive Reporting</span>
+</a>
+
+    </nav>
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <i class="fas fa-circle" style="color: #2ecc71; font-size: 10px;"></i>
+        <span>System Online</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="page-title">
+        <h1>Network Security Dashboard</h1>
+        <p>Real-time traffic monitoring & threat detection</p>
+      </div>
+      <div class="top-bar-actions">
+          <div class="health-badge">
+              <i class="fas fa-microchip"></i>
+              <span id="cpu-usage">0%</span>
+          </div>
+          <div class="health-badge">
+              <i class="fas fa-memory"></i>
+              <span id="mem-usage">0%</span>
+          </div>
+          <div class="health-badge">
+              <i class="fas fa-tachometer-alt"></i>
+              <span id="packets-per-sec">0</span>
+              <small>pkt/s</small>
+          </div>
+          <div class="stats-badge">
+              <i class="fas fa-chart-simple"></i>
+              <span id="total-captured">0</span>
+              <small>Total Captured</small>
+          </div>
+
+          <div class="control-group">
+              <span id="detection-mode-label" style="color: var(--text-muted); font-size: 13px; margin-right: 4px;">Balanced</span>
+              <select id="detection-mode-select" class="mode-select">
+                  <option value="strict">Strict</option>
+                  <option value="balanced" selected>Balanced</option>
+                  <option value="paranoid">Paranoid</option>
+              </select>
+              <button id="play-btn" class="control-btn play" title="Start Monitoring"><i class="fas fa-play"></i></button>
+              <button id="pause-btn" class="control-btn pause" title="Pause Monitoring"><i class="fas fa-pause"></i></button>
+              <button id="stop-btn" class="control-btn stop" title="Stop Monitoring"><i class="fas fa-stop"></i></button>
+              <button id="restart-btn" class="control-btn restart" title="Restart"><i class="fas fa-sync-alt"></i></button>
+          </div>
+      </div>
+    </div>
+
+    <div id="dashboard-view" class="view active">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-network-wired"></i></div><div class="stat-info"><h3 id="packets-captured">0</h3><p>Packets Displayed</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-project-diagram"></i></div><div class="stat-info"><h3 id="flows-analysed">0</h3><p>Flows Analysed</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-info"><h3 id="active-hosts">0</h3><p>Active Hosts</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="stat-info"><h3 id="alerts-count">0</h3><p>Security Alerts</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-info"><h3 id="dash-mtta">--</h3><p>MTTA (avg)</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3 id="dash-mttr">--</h3><p>MTTR (avg)</p></div></div>
+      </div>
+      <div class="stats-grid" id="detection-stats-container" style="margin-bottom: 20px;">
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-search"></i></div><div class="stat-info"><h3 id="stat-portscan">0</h3><p>Port Scans</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-key"></i></div><div class="stat-info"><h3 id="stat-bruteforce">0</h3><p>Brute Force</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-ban"></i></div><div class="stat-info"><h3 id="stat-blacklist">0</h3><p>Blacklist Hits</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-signature"></i></div><div class="stat-info"><h3 id="stat-signature">0</h3><p>Signature Matches</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3 id="stat-beaconing">0</h3><p>Beaconing</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-microchip"></i></div><div class="stat-info"><h3 id="stat-dnstunnel">0</h3><p>DNS Tunneling</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-upload"></i></div><div class="stat-info"><h3 id="stat-exfil">0</h3><p>Data Exfiltration</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-shield-alt"></i></div><div class="stat-info"><h3 id="stat-hostrisk">0</h3><p>Host Risk Changes</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-mask"></i></div><div class="stat-info"><h3 id="stat-tor">0</h3><p>Tor Connections</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-skull"></i></div><div class="stat-info"><h3 id="stat-c2">0</h3><p>C2 Activity</p></div></div>
+    <div class="stat-card" style="grid-column: span 4;"><div class="stat-icon"><i class="fas fa-robot"></i></div><div class="stat-info" style="flex:1;"><h3>Automated Response Timeline</h3><div id="auto-timeline" style="font-size:13px; color:var(--text-muted); max-height:200px; overflow-y:auto;">Loading...</div></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-fire"></i></div><div class="stat-info"><h3>Top Triggered IOCs</h3><div id="top-ioc-list" style="font-size:14px; color:var(--text-muted);">Loading...</div></div></div></div>
+      <div class="charts-section">
+        <div class="section-header"><h2><i class="fas fa-chart-line"></i> Traffic Analytics</h2><div class="export-buttons"><button id="export-charts-btn" class="btn-secondary"><i class="fas fa-camera"></i> Export Charts</button></div></div>
+        <div class="charts-grid">
+          <div class="chart-card"><div class="chart-header"><h3>Protocol Distribution</h3><i class="fas fa-chart-pie"></i></div><canvas id="protocolChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Traffic Over Time</h3><i class="fas fa-waveform"></i></div><canvas id="protocolOverTimeChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Top Ports</h3><i class="fas fa-plug"></i></div><canvas id="commonPortsChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Host Risk Distribution</h3><i class="fas fa-chart-simple"></i></div><canvas id="hostRiskChart"></canvas></div>
+        </div>
+      </div>
+      <div class="ml-dashboard">
+        <div class="section-header"><h2><i class="fas fa-brain"></i> AI-Powered Risk Analysis</h2><span class="badge">ML Model Active</span></div>
+        <div class="table-container"><table id="host-risk-table"><thead><tr><th>Host</th><th>Status</th><th>Risk Score</th><th>Classification</th><th>Confidence</th><th>Kill Chain</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="charts-section">
+        <div class="section-header"><h2><i class="fas fa-fire"></i> Host Risk Heatmap</h2><span class="badge">Live Risk Scores</span></div>
+        <div id="host-risk-heatmap" class="heatmap-grid"><div class="heatmap-placeholder">Loading hosts...</div></div>
+      </div>
+    </div>
+
+    <div id="analytics-view" class="view hidden">
+      <div class="charts-section">
+        <div class="section-header"><h2><i class="fas fa-chart-line"></i> Advanced Analytics</h2></div>
+        <div class="charts-grid">
+          <div class="chart-card"><div class="chart-header"><h3>Protocol Distribution</h3></div><canvas id="analyticsProtocolChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Traffic Over Time</h3></div><canvas id="analyticsTrafficChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Top Ports</h3></div><canvas id="analyticsPortsChart"></canvas></div>
+          <div class="chart-card"><div class="chart-header"><h3>Host Risk Distribution</h3></div><canvas id="analyticsRiskChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="flows-view" class="view hidden">
+      <div class="flow-analysis-section">
+        <div class="section-header"><h2><i class="fas fa-project-diagram"></i> Flow Analysis</h2><span class="badge">Network Flows</span></div>
+        <div class="table-container"><table id="flow-analysis-table"><thead><tr><th>Flow ID</th><th>Source</th><th>Destination</th><th>Protocol</th><th>Packets</th><th>Risk Score</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="packets-view" class="view hidden">
+      <div class="global-search">
+        <i class="fas fa-search"></i>
+        <input type="search" id="global-search" placeholder="Search across IPs, ports, payloads, protocols...">
+      </div>
+      <div class="filters-section">
+        <div class="section-header"><h2><i class="fas fa-filter"></i> Packet Filters</h2><button id="clear-filters" class="btn-text"><i class="fas fa-eraser"></i> Clear All</button></div>
+        <div class="filters-grid">
+          <div class="filter-group"><label><i class="fas fa-code"></i> Protocol</label><input type="text" id="protocolFilter" placeholder="TCP, UDP, ICMP..."></div>
+          <div class="filter-group"><label><i class="fas fa-network-wired"></i> Source IP</label><input type="text" id="srcFilter" placeholder="192.168.1.1"></div>
+          <div class="filter-group"><label><i class="fas fa-bullseye"></i> Destination IP</label><input type="text" id="dstFilter" placeholder="8.8.8.8"></div>
+          <div class="filter-group"><label><i class="fas fa-plug"></i> Source Port</label><input type="text" id="srcPortFilter" placeholder="Port number"></div>
+          <div class="filter-group"><label><i class="fas fa-plug"></i> Destination Port</label><input type="text" id="dstPortFilter" placeholder="Port number"></div>
+          <div class="filter-group"><label><i class="fas fa-file-alt"></i> Payload</label><input type="text" id="payloadFilter" placeholder="Search in payload..."></div>
+        </div>
+      </div>
+      <div class="tools-section">
+        <div class="section-header"><h2><i class="fas fa-toolbox"></i> Security Tools</h2><button id="toggle-tools" class="btn-text"><i class="fas fa-chevron-down"></i> Show Tools</button></div>
+        <div id="tools-panel" class="tools-panel hidden">
+          <button class="tool-btn" id="time-tool-btn"><i class="fas fa-clock"></i><span>Time Filter</span></button>
+          <button class="tool-btn" id="port-tool-btn"><i class="fas fa-plug"></i><span>Port Scanner</span></button>
+          <button class="tool-btn" id="blacklist-tool-btn"><i class="fas fa-ban"></i><span>IP Blacklist</span></button>
+          <button class="tool-btn" id="signature-tool-btn"><i class="fas fa-signature"></i><span>Signature Scanner</span></button>
+          <button class="tool-btn" id="manipulate-tool-btn"><i class="fas fa-edit"></i><span>Packet Editor</span></button>
+        </div>
+      </div>
+      <div class="packets-section">
+        <div class="section-header"><h2><i class="fas fa-table-list"></i> Live Packet Stream</h2><button id="export-btn" class="btn-primary"><i class="fas fa-download"></i> Export CSV</button></div>
+        <div class="table-container"><table id="packet-table"><thead><tr><th>Time</th><th>Source IP</th><th>Src Port</th><th>Destination IP</th><th>Dst Port</th><th>Protocol</th><th>Payload</th><th style="width:40px"></th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="threats-view" class="view hidden">
+      <div id="mitre-summary" style="margin-top: 20px;"></div>
+      <div class="ml-dashboard">
+        <div class="section-header"><h2><i class="fas fa-brain"></i> AI-Powered Risk Analysis</h2><span class="badge">ML Model Active</span></div>
+        <div class="table-container"><table id="threat-host-table"><thead><tr><th>Host</th><th>Status</th><th>Risk Score</th><th>Classification</th><th>Confidence</th><th>Kill Chain</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="timeline-section">
+        <div class="section-header">
+          <h2><i class="fas fa-clock"></i> Attack Timeline</h2>
+          <div>
+            <button id="replay-timeline-btn" class="btn-secondary"><i class="fas fa-play"></i> Replay Timeline</button>
+            <button id="export-timeline" class="btn-secondary"><i class="fas fa-download"></i> Export</button>
+          </div>
+        </div>
+        <div class="table-container"><table id="timeline-table"><thead><tr><th>Time</th><th>Severity</th><th>Event Type</th><th>Details</th><th>Confidence</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="geo-view" class="view hidden">
+  <div class="charts-section">
+        <div class="section-header">
+        <h2><i class="fas fa-globe"></i> Attack Heat Map</h2>
+        <div>
+            <span class="badge" id="geo-success-rate">Geo Success: 100%</span>
+            <span class="badge">Live Geo IP Mapping</span>
+        </div>
+    </div>
+    <div class="heatmap-grid" id="heatmap-grid">
+      <div class="heatmap-placeholder">Loading geo data...</div>
+    </div>
+  </div>
+
+  <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-upload"></i></div>
+      <div class="stat-info">
+        <h3 id="unique-src-countries">0</h3>
+        <p>Source Countries</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fas fa-download"></i></div>
+      <div class="stat-info">
+        <h3 id="unique-dst-countries">0</h3>
+        <p>Destination Countries</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Top Source Countries</h3>
+        <i class="fas fa-map-marker-alt"></i>
+      </div>
+      <div class="table-container">
+        <table id="source-country-table">
+          <thead><tr><th>Country</th><th>Packets</th><th>%</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Top Destination Countries</h3>
+        <i class="fas fa-bullseye"></i>
+      </div>
+      <div class="table-container">
+        <table id="dest-country-table">
+          <thead><tr><th>Country</th><th>Packets</th><th>%</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-top: 24px;">
+      <div class="chart-header">
+          <h3><i class="fas fa-map-marked-alt"></i> Global Traffic Map</h3>
+          <span class="badge">Live Flow Visualization</span>
+      </div>
+      <div id="world-map" style="height: 450px; border-radius: 12px; background: #1a1a1f; overflow: hidden;"></div>
+      <div class="map-attribution" style="font-size: 10px; color: #6b7280; text-align: center; margin-top: 8px;">
+          <i class="fas fa-map-pin"></i> Markers show active hosts | Coloured lines show traffic flows (green=low, orange=medium, red=high risk)
+        </div>
+    </div>
+
+    <div class="chart-card" style="margin-top: 24px;">
+    <div class="chart-header">
+        <h3><i class="fas fa-exchange-alt"></i> Top Geo Flows</h3>
+        <span class="badge">Highest Risk First</span>
+    </div>
+    <div class="table-container" style="max-height: 300px;">
+        <table id="geo-flows-table">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Packets</th>
+                    <th>Risk Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="4">Loading flows...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="chart-card" style="margin-top: 24px;">
+    <div class="chart-header">
+        <h3><i class="fas fa-skull-crossbones"></i> Top Threat Countries</h3>
+        <span class="badge">Highest Average Risk</span>
+    </div>
+    <div class="table-container" style="max-height: 200px;">
+        <table id="threat-countries-table">
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Avg Risk</th>
+                    <th>Packets</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="stats-grid geo-scorecard" style="grid-template-columns: repeat(4, 1fr); margin-top: 24px;">
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-globe"></i></div><div class="stat-info"><h3 id="geo-countries-seen">0</h3><p>Countries Seen</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-info"><h3 id="geo-highest-risk-country">-</h3><p>Highest Risk Country</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><h3 id="geo-avg-risk-score">0</h3><p>Avg Risk Score</p></div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-satellite-dish"></i></div><div class="stat-info"><h3 id="geo-resolution-rate">0%</h3><p>Geo Resolution</p></div></div>
+</div>
+
+<div class="charts-grid" style="margin-top: 24px;">
+    <div class="chart-card">
+        <div class="chart-header"><h3>Threat Distribution</h3><i class="fas fa-chart-pie"></i></div>
+        <canvas id="geoThreatChart" height="150"></canvas>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header"><h3>Top Source Countries</h3><i class="fas fa-chart-bar"></i></div>
+        <canvas id="geoSourceBarChart" height="150"></canvas>
+    </div>
+</div>
+
+<div class="chart-card" style="margin-top: 24px;">
+    <div class="chart-header"><h3>Risk Timeline (Last 20 mins)</h3><i class="fas fa-chart-line"></i></div>
+    <canvas id="geoRiskTimeline" height="100"></canvas>
+</div>
+
+<div class="chart-card" style="margin-top: 24px;">
+    <div class="chart-header"><h3>Country Risk Heatmap</h3><i class="fas fa-fire"></i></div>
+    <div class="heatmap-grid" id="risk-heatmap-grid">
+        <div class="heatmap-placeholder">Loading risk data...</div>
+    </div>
+</div>
+
+<div class="chart-card" style="margin-top: 24px;">
+    <div class="chart-header"><h3>Sankey Diagram (Top Flows)</h3><i class="fas fa-project-diagram"></i></div>
+    <div id="sankey-container" style="height: 300px;"></div>
+</div>
+</div>
+    <div id="alerts-view" class="view hidden">
+        <div class="alerts-management">
+            <div class="section-header">
+                <h2><i class="fas fa-bell"></i> Alert Management</h2>
+                <div class="alert-filters">
+                    <span id="alerts-count-open">0</span> Open
+                    <span id="alerts-count-investigating">0</span> Investigating
+                    <span id="alerts-count-resolved">0</span> Resolved
+                    <span id="alerts-count-fp">0</span> False Positive
+                </div>
+
+                <div class="stats-grid" id="alert-metrics" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="stat-card"><div class="stat-info"><h3 id="alert-mtta">--</h3><p>MTTA (min)</p></div></div>
+                <div class="stat-card"><div class="stat-info"><h3 id="alert-mttr">--</h3><p>MTTR (min)</p></div></div>
+                <div class="stat-card"><div class="stat-info"><h3 id="alert-resolved-count">0</h3><p>Resolved Alerts</p></div></div>
+                <div class="stat-card"><div class="stat-info"><h3 id="alert-open-count">0</h3><p>Open Alerts</p></div></div>
+            </div>
+            </div>
+            <div class="filters-section">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="alert-status-filter" class="mode-select">
+                            <option value="all">All</option>
+                            <option value="open">Open</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="false_positive">False Positive</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Severity</label>
+                            <select id="alert-severity-filter" class="mode-select">
+                              <option value="all">All</option>
+                              <option value="critical">Critical</option>
+                              <option value="high">High</option>
+                              <option value="medium">Medium</option>
+                              <option value="low">Low</option>
+                          </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Search</label>
+                        <input type="text" id="alert-search" placeholder="Search details, IPs...">
+                    </div>
+                    <div class="filter-group">
+                        <button id="alert-clear-filters" class="btn-text">Clear Filters</button>
+                    </div>
+                </div>
+            </div>
+        <div class="section-header">
+          <h2><i class="fas fa-clock"></i> Attack Timeline</h2>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <button id="replay-timeline-btn-alerts" class="btn-secondary">
+            <i class="fas fa-play"></i> Replay Timeline
+        </button>
+      </div>
+        </div>
+            <div class="table-container">
+                <table id="alerts-table">
+                    <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Severity</th>
+                          <th>Event</th>
+                          <th>Details</th>
+                          <th>Status</th>
+                          <th>Notes</th> 
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                    <tbody id="alerts-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="cases-view" class="view hidden">
+    <div class="cases-management">
+              <div id="case-metrics" style="display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap;">
+            </div>
+        <div class="section-header">
+            <h2><i class="fas fa-folder-open"></i> Incident Cases</h2>
+            <button id="new-case-btn" class="btn-primary"><i class="fas fa-plus"></i> New Case</button>
+        </div>
+
+        <div class="table-container">
+            <table id="cases-table">
+                <thead>
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Title</th>
+                        <th>Severity</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Alerts</th>
+                        <th>Assigned To</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cases-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+   </div>
+
+<div id="ioc-view" class="view hidden">
+    <div class="ioc-management">
+        <div class="section-header">
+            <h2><i class="fas fa-list-ul"></i> Indicator of Compromise (IOC) Management</h2>
+            <div>
+                <button id="export-ioc-report" class="btn-secondary"><i class="fas fa-file-export"></i> Export Report</button>
+                <button id="add-ioc-btn" class="btn-primary"><i class="fas fa-plus"></i> Add IOC</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="ioc-table">
+                <thead>
+                   <tr>
+                      <th>Type</th>
+                      <th>Value</th>
+                      <th>Severity</th>
+                      <th>Hits</th>
+                      <th>Affected Hosts</th>
+                      <th>First Seen</th>  
+                      <th>Last Seen</th>
+                      <th>Description</th>
+                      <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="ioc-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="rules-view" class="view hidden">
+    <div class="rules-management">
+        <div class="section-header">
+            <h2><i class="fas fa-gavel"></i> Custom Detection Rules</h2>
+            <button id="add-rule-btn" class="btn-primary"><i class="fas fa-plus"></i> New Rule</button>
+        </div>
+        <div class="table-container">
+            <table id="rules-table">
+                <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Conditions</th>
+                      <th>Severity</th>
+                      <th>Message</th>
+                      <th>Status</th>
+                      <th>Hits</th>
+                      <th>Category</th>
+                      <th>MITRE</th>
+                      <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="rules-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="automation-view" class="view hidden">
+    <div class="automation-management">
+        <div class="section-header">
+            <h2><i class="fas fa-robot"></i> Automated Response Policies</h2>
+            <div>
+                <button id="add-policy-btn" class="btn-primary"><i class="fas fa-plus"></i> New Policy</button>
+                <button id="refresh-automation-btn" class="btn-secondary"><i class="fas fa-sync"></i></button>
+            </div>
+        </div>
+
+        <div class="section-header" style="margin-top: 24px;">
+          <h2><i class="fas fa-file-code"></i> Policy Templates</h2>
+          <span class="text-muted" style="font-size:13px;">Click to create</span>
+      </div>
+      <div class="templates-grid" id="policy-templates-grid">
+      </div>
+
+        <div class="table-container" style="max-height: 300px;">
+            <table id="policy-table">
+                <thead>
+                  <tr>
+                      <th>Name</th>
+                      <th>Conditions</th>
+                      <th>Actions</th>
+                      <th>Status</th>
+                      <th>Auto</th>
+                      <th>Hits</th>               
+                      <th>Last Triggered</th>   
+                      <th>Actions</th>
+                  </tr>
+              </thead>
+                <tbody id="policy-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="section-header" style="margin-top:24px;">
+          <h2><i class="fas fa-clipboard-check"></i> Pending Actions <span class="badge" id="pending-count">0</span></h2>
+      </div>
+      <div id="approval-queue-container">
+          <div class="approval-queue-grid" id="approval-queue-grid">
+          </div>
+      </div>
+
+        <div class="section-header" style="margin-top: 24px;">
+            <h2><i class="fas fa-history"></i> Action Log</h2>
+            <button id="clear-action-logs" class="btn-text">Clear Logs</button>
+        </div>
+        <div class="table-container" style="max-height: 300px;">
+            <table id="action-log-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Policy</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody id="action-log-tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="stats-grid" id="automation-stats" style="margin-top: 20px;">
+            <div class="stat-card"><div class="stat-info"><h3 id="auto-total-actions">0</h3><p>Total Actions</p></div></div>
+            <div class="stat-card"><div class="stat-info"><h3 id="auto-success-actions">0</h3><p>Successful</p></div></div>
+            <div class="stat-card"><div class="stat-info"><h3 id="auto-pending-actions">0</h3><p>Pending Approval</p></div></div>
+            <div class="stat-card"><div class="stat-info"><h3 id="auto-blocked-hosts">0</h3><p>Blocked IPs</p></div></div>
+        </div>
+    </div>
+</div>
+
+<div id="investigation-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-sitemap"></i> Investigation Graph</h2>
+        <div>
+            <button id="graph-zoom-fit" class="btn-secondary"><i class="fas fa-expand"></i> Fit</button>
+            <button id="graph-export" class="btn-secondary"><i class="fas fa-download"></i> Export</button>
+        </div>
+    </div>
+    <div class="graph-container" style="height: 600px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); position: relative;">
+        <div id="investigation-graph" style="width: 100%; height: 100%;"></div>
+        <div id="graph-detail-panel" style="position: absolute; right: 0; top: 0; width: 320px; height: 100%; background: var(--surface); border-left: 1px solid var(--border); padding: 16px; overflow-y: auto; display: none; z-index: 10;">
+        </div>
+    </div>
+    <div class="graph-controls" style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <label><input type="checkbox" id="graph-show-hosts" checked> Hosts</label>
+        <label><input type="checkbox" id="graph-show-alerts" checked> Alerts</label>
+        <label><input type="checkbox" id="graph-show-iocs" checked> IOCs</label>
+        <label><input type="checkbox" id="graph-show-cases" checked> Cases</label>
+        <label><input type="checkbox" id="graph-show-ips" checked> IPs</label>
+        <label><input type="checkbox" id="graph-show-edges" checked> Connections</label>
+        <label><input type="checkbox" id="graph-show-mitre" checked> MITRE Techniques</label>
+        <button id="graph-reset-filters" class="btn-text">Reset Filters</button>
+    </div>
+</div>
+<div id="hunting-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-search"></i> Threat Hunting Workspace</h2>
+        <div>
+            <button id="hunting-export" class="btn-secondary"><i class="fas fa-download"></i> Export Results</button>
+            <button id="hunting-clear" class="btn-text">Clear</button>
+        </div>
+    </div>
+
+    <div class="hunting-query-bar" style="display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+        <input type="text" id="hunting-query-input" class="modal-input" placeholder='e.g., src:192.168.1.10 severity:high protocol:DNS ioc:true' list="hunting-query-suggestions" style="flex: 1; min-width: 300px;">
+        <datalist id="hunting-query-suggestions">
+            <option value="src:">
+            <option value="dst:">
+            <option value="protocol:">
+            <option value="severity:">
+            <option value="confidence:">
+            <option value="country:">
+            <option value="ioc:true">
+            <option value="risk:>">
+            <option value="risk:<">
+            <option value="type:">
+            <option value="host:">
+            <option value="event:">
+            <option value="NOT">
+            <option value="OR">
+            <option value="AND">
+            <option value="payload:">
+            <option value="src_port:">
+           <option value="dst_port:">
+        </datalist>
+        <div id="hunting-translation" style="font-size:13px; color:var(--text-muted); margin-top:4px; min-height:20px;"></div>
+        <button id="hunting-run-btn" class="btn-primary"><i class="fas fa-play"></i> Hunt</button>
+        <button id="hunting-save-btn" class="btn-secondary"><i class="fas fa-save"></i> Save Query</button>
+    </div>
+
+    <div class="hunting-templates" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+        <span style="color: var(--text-muted); margin-right: 8px;">Templates:</span>
+        <button class="hunt-template btn-secondary btn-sm" data-query='event:"Brute Force" severity:high'>Brute Force</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='event:"IOC Match"'>IOC Hits</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='protocol:DNS'>DNS Traffic</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='risk:>80'>High Risk</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='severity:critical'>Critical Alerts</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='country:RU'>Russia Traffic</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='ioc:true'>IOC Matches</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='event:"Tor Connection"'>Tor Activity</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='protocol:ICMP'>ICMP Traffic</button>
+        <button class="hunt-template btn-secondary btn-sm" data-query='confidence:>90'>High Confidence</button>
+    </div>
+
+    <div class="section-header" style="margin-top: 8px;">
+        <h3><i class="fas fa-book"></i> Saved Queries</h3>
+        <button id="saved-query-toggle" class="btn-text">Show/Hide</button>
+    </div>
+    <div id="saved-query-library" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 8px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);">
+    </div>
+
+    <div class="hunting-stats" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-packet-count">0</h3><p>Packets</p></div></div>
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-alert-count">0</h3><p>Alerts</p></div></div>
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-host-count">0</h3><p>Hosts</p></div></div>
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-ioc-count">0</h3><p>IOCs</p></div></div>
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-incident-count">0</h3><p>Incidents</p></div></div>
+        <div class="stat-card" style="flex: 0 0 auto;"><div class="stat-info"><h3 id="hunting-case-count">0</h3><p>Cases</p></div></div>
+    </div>
+
+    <div class="hunting-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+        <button class="hunting-tab active" data-tab="packets">Packets</button>
+        <button class="hunting-tab" data-tab="alerts">Alerts</button>
+        <button class="hunting-tab" data-tab="hosts">Hosts</button>
+        <button class="hunting-tab" data-tab="iocs">IOCs</button>
+        <button class="hunting-tab" data-tab="incidents">Incidents</button>
+        <button class="hunting-tab" data-tab="cases">Cases</button>
+    </div>
+
+
+    <div class="hunting-results">
+        <div id="hunting-results-packets" class="hunting-result-panel">
+            <div class="table-container">
+                <table id="hunting-packet-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Dest</th>
+                            <th>Protocol</th>
+                            <th>Port</th>
+                            <th>Payload</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hunting-packet-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="hunting-results-alerts" class="hunting-result-panel hidden">
+            <div class="table-container">
+                <table id="hunting-alert-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Severity</th>
+                            <th>Event</th>
+                            <th>Details</th>
+                            <th>Confidence</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hunting-alert-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="hunting-results-hosts" class="hunting-result-panel hidden">
+            <div class="table-container">
+                <table id="hunting-host-table">
+                    <thead>
+                        <tr>
+                            <th>Host</th>
+                            <th>Risk</th>
+                            <th>Status</th>
+                            <th>Stages</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hunting-host-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="hunting-results-iocs" class="hunting-result-panel hidden">
+            <div class="table-container">
+                <table id="hunting-ioc-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Severity</th>
+                            <th>Hits</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hunting-ioc-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="hunting-results-incidents" class="hunting-result-panel hidden">
+        <div class="table-container">
+            <table id="hunting-incident-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Hosts</th>
+                        <th>Alerts</th>
+                    </tr>
+                </thead>
+                <tbody id="hunting-incident-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="hunting-results-cases" class="hunting-result-panel hidden">
+        <div class="table-container">
+            <table id="hunting-case-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Alerts</th>
+                    </tr>
+                </thead>
+                <tbody id="hunting-case-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    </div>
+</div>
+
+<div id="mitre-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-flag"></i> MITRE ATT&CK Coverage</h2>
+        <button id="export-navigator" class="btn-secondary"><i class="fas fa-download"></i> Export Navigator Layer</button>
+    </div>
+
+    <div class="charts-section" style="margin-bottom: 24px;">
+        <h3 style="margin-bottom: 12px;">Tactic Coverage</h3>
+        <div id="tactic-coverage-container" style="display: flex; flex-direction: column; gap: 12px;">
+        </div>
+    </div>
+
+    <div class="section-header">
+        <h3>Technique Details</h3>
+        <span class="badge" id="technique-count">0</span>
+    </div>
+    <div class="table-container" style="max-height: 400px;">
+        <table id="mitre-technique-table">
+            <thead>
+                <tr>
+                    <th>Technique</th>
+                    <th>Name</th>
+                    <th>Tactic</th>
+                    <th>Detections</th>
+                    <th>Severity</th>
+                    <th>Source</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody id="mitre-technique-tbody">
+                <tr><td colspan="4">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-header" style="margin-top: 24px;">
+        <h3>Uncovered ATT&CK Areas</h3>
+        <span class="badge" id="uncovered-count">0</span>
+    </div>
+    <div id="uncovered-techniques-container" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+    </div>
+</div>
+
+<div id="assets-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-server"></i> Asset Inventory</h2>
+        <div>
+            <button id="export-assets-btn" class="btn-secondary"><i class="fas fa-download"></i> Export CSV</button>
+            <button id="add-asset-btn" class="btn-primary"><i class="fas fa-plus"></i> Add Asset</button>
+        </div>
+    </div>
+    <div class="table-container" style="max-height: 500px;">
+        <table id="assets-table">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Hostname</th>
+                    <th>Owner</th>
+                    <th>Risk</th>
+                    <th>Criticality</th>
+                    <th>OS</th>
+                    <th>Tags</th>
+                    <th>Alerts</th>
+                    <th>Status</th>
+                    <th>First Seen</th>
+                    <th>Risk History</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="assets-tbody">
+                <tr><td colspan="8" style="text-align:center;">Loading assets...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="ueba-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-user-astronaut"></i> User & Entity Behavior Analytics</h2>
+        <button id="refresh-ueba-btn" class="btn-secondary"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+    <div class="ueba-summary" style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;">
+        <div class="stat-card"><div class="stat-info"><h3 id="ueba-total-hosts">0</h3><p>Active Hosts</p></div></div>
+        <div class="stat-card"><div class="stat-info"><h3 id="ueba-anomalous-hosts">0</h3><p>Anomalous Hosts</p></div></div>
+        <div class="stat-card"><div class="stat-info"><h3 id="ueba-avg-score">0</h3><p>Average Anomaly Score</p></div></div>
+        <div class="stat-card"><div class="stat-info"><h3 id="ueba-max-score">0</h3><p>Highest Score</p></div></div>
+    </div>
+    <div class="table-container" style="max-height: 500px;">
+        <table id="ueba-table">
+            <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>Anomaly Score</th>
+                    <th>Risk Level</th>
+                    <th>Anomalies</th>
+                    <th>Traffic Volume</th>
+                    <th>New Destinations</th>
+                    <th>Rare Protocols</th>
+                    <th>Last Seen</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ueba-tbody">
+                <tr><td colspan="8" style="text-align:center;">Analyzing behavior...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="priority-view" class="view hidden">
+    <div class="section-header">
+        <h2><i class="fas fa-sort-amount-down"></i> AI Priority Queue</h2>
+        <div class="priority-stats">
+            <span>Open Alerts: <strong id="priority-total">0</strong></span>
+            <span>Highest Priority: <strong id="priority-highest">—</strong> <span id="priority-highest-detail"></span></span>
+        </div>
+    </div>
+    <div class="table-container" style="max-height: 600px;">
+        <table id="priority-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Severity</th>
+                    <th>Alert</th>
+                    <th>Source/Dest</th>
+                    <th>Priority Score</th>
+                    <th>Reason</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="priority-tbody">
+                <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div style="margin-top: 12px; padding: 12px; background: var(--surface-light); border-radius: 8px;">
+        <p style="font-size: 13px; color: var(--text-muted);">
+            <i class="fas fa-info-circle"></i> Priority scores are calculated from asset criticality, confidence, UEBA, IOC matches, attack stage progression, automation actions, and severity.
+        </p>
+    </div>
+</div>
+
+<div id="incidents-view" class="view hidden">
+    <div class="incidents-management">
+        <div class="section-header">
+            <h2><i class="fas fa-fire"></i> AI-Correlated Incidents</h2>
+            <div>
+                <span class="badge" id="incidents-open-count">0</span> Open
+                <button id="run-correlation-btn" class="btn-secondary"><i class="fas fa-sync"></i> Run Correlation</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="incidents-table">
+                <thead>
+                    <tr>
+                        <th>Incident</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Hosts</th>
+                        <th>Alerts</th>
+                        <th>Confidence</th>
+                        <th>Stages</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="incidents-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div id="executive-view" class="view hidden">
+    <div class="executive-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h1 style="font-size: 28px; font-weight: 600; margin: 0;">Executive Security Report</h1>
+            <p style="color: var(--text-muted); margin: 4px 0 0 0;">AI-generated summary for the last 24 hours</p>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button id="exec-export-pdf" class="btn-primary"><i class="fas fa-file-pdf"></i> PDF Report</button>
+            <button id="exec-export-soc" class="btn-secondary"><i class="fas fa-file-alt"></i> SOC Report</button>
+            <button id="exec-export-board" class="btn-secondary"><i class="fas fa-file-powerpoint"></i> Board Report</button>
+            <button id="exec-export-csv" class="btn-secondary"><i class="fas fa-file-csv"></i> CSV Metrics</button>
+            <button id="executive-refresh" class="btn-secondary"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="executive-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="stat-info">
+                <h3 id="exec-risk-score">--</h3>
+                <p>Overall Risk</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-info">
+                <h3 id="exec-threat-score">--</h3>
+                <p>Threat Score</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-fire"></i></div>
+            <div class="stat-info">
+                <h3 id="exec-incidents">0</h3>
+                <p>Incidents</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-bell"></i></div>
+            <div class="stat-info">
+                <h3 id="exec-alerts">0</h3>
+                <p>Alerts Processed</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-grid" style="margin-bottom: 24px;">
+        <div class="chart-card">
+            <div class="chart-header"><h3>Security Posture Score</h3><i class="fas fa-flag-checkered"></i></div>
+            <div style="display: flex; flex-direction: column; align-items: center; padding: 8px 0;">
+                <div style="width: 120px; height: 120px; position: relative;">
+                    <canvas id="exec-posture-gauge" width="120" height="120"></canvas>
+                    <span id="exec-posture-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; font-weight: 700; color: var(--text);">--</span>
+                </div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-top: 8px;" id="exec-posture-label">Loading...</div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header"><h3>Business Impact by Criticality</h3><i class="fas fa-building"></i></div>
+            <div id="exec-business-impact" style="display: flex; flex-direction: column; gap: 8px; padding: 4px 0;">
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-grid" style="margin-bottom: 24px;">
+        <div class="chart-card">
+            <div class="chart-header"><h3>MITRE ATT&CK Coverage</h3><i class="fas fa-flag"></i></div>
+            <div id="exec-mitre-coverage" style="padding: 8px 0;">
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header"><h3>Monthly Trend (30 days)</h3><i class="fas fa-chart-bar"></i></div>
+            <canvas id="exec-monthly-trend" height="150"></canvas>
+        </div>
+    </div>
+
+    <div class="executive-summary" style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 24px; border-left: 4px solid var(--primary);">
+        <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-brain" style="color: var(--primary);"></i> AI Narrative
+        </h3>
+        <div id="exec-narrative" style="font-size: 15px; line-height: 1.8; color: var(--text);">
+            Loading...
+        </div>
+        <div style="margin-top: 12px; font-size: 13px; color: var(--text-muted); display: flex; gap: 24px; flex-wrap: wrap;">
+            <span><strong>Data source:</strong> NeoShield AI Engine v2.0</span>
+            <span><strong>Period:</strong> Last 24 hours</span>
+        </div>
+    </div>
+
+    <div class="charts-grid" style="margin-bottom: 24px;">
+        <div class="chart-card">
+            <div class="chart-header"><h3>Threat Campaign Summary</h3><i class="fas fa-crown"></i></div>
+            <div id="exec-campaign-summary" style="font-size: 14px; line-height: 1.6; max-height: 200px; overflow-y: auto;">
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header"><h3>AI Forecast: Predicted Next Stage</h3><i class="fas fa-crystal-ball"></i></div>
+            <div id="exec-forecast" style="font-size: 14px; line-height: 1.6; max-height: 200px; overflow-y: auto;">
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-grid" style="margin-bottom: 24px;">
+        <div class="chart-card">
+            <div class="chart-header"><h3>AI Findings</h3><i class="fas fa-list-check"></i></div>
+            <ul id="exec-ai-findings" style="list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 1.8;">
+                <li style="color: var(--text-muted);">Loading...</li>
+            </ul>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header"><h3>Response Performance</h3><i class="fas fa-gauge-high"></i></div>
+            <div id="exec-response-kpis" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+            </div>
+        </div>
+    </div>
+
+    <div class="executive-recommendations" style="background: var(--surface); border-radius: 16px; padding: 20px; margin-bottom: 24px; border-left: 4px solid var(--warning);">
+        <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-lightbulb" style="color: var(--warning);"></i> Executive Recommendations
+        </h3>
+        <ul id="exec-recommendations-list" style="list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 1.8;">
+            <li style="color: var(--text-muted);">Loading recommendations...</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
+        NeoShield Security Report · Generated <span id="exec-report-timestamp"></span>
+    </div>
+</div>
+
+
+  </div>
+
+  <div id="packet-drawer" class="drawer hidden">
+    <div class="drawer-header">
+      <h3><i class="fas fa-info-circle"></i> Packet Details</h3>
+      <button class="close-drawer">&times;</button>
+    </div>
+    <div class="drawer-content" id="packet-drawer-content">
+      <pre>Select a packet to view details.</pre>
+    </div>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+
+  <div id="time-tool-modal" class="modal hidden">
+    <div class="modal-header"><h3><i class="fas fa-clock"></i> Time Filter</h3><button class="close-btn" id="close-time-modal">&times;</button></div>
+    <div class="modal-body">
+      <select id="modal-position-select" class="modal-select"><option value="exact" selected>Exact Time</option><option value="range">Time Range</option></select>
+      <div id="exact-time-container"><label>Exact Time:</label><input type="time" step="1" id="exactTime" class="modal-input"></div>
+      <div id="range-time-container" class="hidden"><label>Start Time:</label><input type="time" step="1" id="startTime" class="modal-input"><label>End Time:</label><input type="time" step="1" id="endTime" class="modal-input"></div>
+    </div>
+  </div>
+
+  <div id="port-tool-modal" class="modal hidden">
+    <div class="modal-header"><h3><i class="fas fa-plug"></i> Port Scanner</h3><button class="close-btn" id="close-port-modal">&times;</button></div>
+    <div class="modal-body">
+      <div class="toggle-switch"><label>Auto Scan</label><input type="checkbox" id="auto-scan-toggle"></div>
+      <label>Custom Ports (comma-separated):</label><textarea id="custom-ports" placeholder="21, 23, 445, 3389..."></textarea>
+      <button id="scan-ports-btn" class="btn-primary">Scan Traffic</button>
+      <div id="port-results"></div>
+    </div>
+  </div>
+
+  <div id="blacklist-tool-modal" class="modal hidden">
+    <div class="modal-header"><h3><i class="fas fa-ban"></i> IP Blacklist Manager</h3><button class="close-btn" id="close-blacklist-modal">&times;</button></div>
+    <div class="modal-body">
+      <div class="options-bar"><div class="options-icon" id="options-toggle">⚙ Settings</div><div class="options-dropdown hidden" id="blacklist-options-menu"><div class="option-item with-submenu" data-option="auto-scan">Auto Scan<div class="submenu"><div class="submenu-item" data-scan-dir="oldest">Oldest First</div><div class="submenu-item" data-scan-dir="latest">Latest First</div><div class="submenu-item" data-scan-dir="latest-forward">New Only</div></div></div><div class="option-item" data-option="block">Auto Block</div></div></div>
+      <label>Upload Blacklist File:</label><label for="blacklist-file" class="custom-file-upload">Choose File</label><input type="file" id="blacklist-file" accept=".txt" hidden><span id="blacklist-file-name">No file selected</span>
+      <label>Manual IP Entry:</label><textarea id="manual-blacklist-input" placeholder="192.168.1.1, 10.0.0.5..."></textarea>
+      <button id="run-blacklist-scan" class="btn-primary">Scan</button><div id="blacklist-results"></div>
+    </div>
+  </div>
+
+  <div id="signature-modal" class="modal hidden">
+    <div class="modal-header"><h3><i class="fas fa-signature"></i> Signature Scanner</h3><button class="close-btn" id="close-signature-modal">&times;</button></div>
+    <div class="modal-body">
+      <div class="options-bar"><div class="options-icon" id="signature-options-toggle">⚙ Settings</div><div class="options-dropdown hidden" id="signature-options-menu"><div class="signature-option-item with-submenu" data-option="auto-scan">Auto Scan<div class="submenu signature-submenu"><div class="submenu-item" data-scan-dir="oldest">Oldest First</div><div class="submenu-item" data-scan-dir="latest">Latest First</div><div class="submenu-item" data-scan-dir="latest-forward">New Only</div></div></div><div class="signature-option-item" data-option="block">Auto Block</div></div></div>
+      <label>Add Signature Pattern:</label><div class="signature-input-group"><input type="text" id="signature-input" placeholder="e.g., login, password, /malware/i"><button id="add-signature-btn" class="btn-secondary">Add</button></div>
+      <ul id="signature-list"></ul><div class="button-group"><button id="start-signature-scan" class="btn-primary">Start Scan</button><button id="clear-signature-scan" class="btn-secondary">Clear</button></div>
+      <div id="signature-results"></div>
+    </div>
+  </div>
+
+  <div id="manipulate-tool-modal" class="modal hidden">
+    <div class="modal-header"><h3><i class="fas fa-edit"></i> Packet Editor</h3><button class="close-btn" id="close-manipulate-modal">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Select Packet:</label><select id="packetIndex" class="modal-select"></select></div>
+      <div class="form-group"><label>Source IP:</label><input type="text" id="editSrc" class="modal-input"></div>
+      <div class="form-group"><label>Destination IP:</label><input type="text" id="editDst" class="modal-input"></div>
+      <div class="form-row"><div class="form-group"><label>Protocol:</label><input type="text" id="editProto" class="modal-input"></div><div class="form-group"><label>Source Port:</label><input type="number" id="editSrcPort" class="modal-input"></div><div class="form-group"><label>Dest Port:</label><input type="number" id="editDstPort" class="modal-input"></div></div>
+      <div class="form-group"><label>Payload:</label><textarea id="editPayload" rows="4" class="modal-textarea"></textarea></div>
+      <button id="apply-packet-edits" class="btn-primary">Apply Changes</button>
+    </div>
+  </div>
+
+  <div id="ip-intel-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-brain"></i> Threat Intelligence</h3>
+        <button class="close-btn" id="close-ip-intel">&times;</button>
+    </div>
+    <div class="modal-body" id="ip-intel-content">
+        Loading...
+    </div>
+</div>
+
+  <div id="port-alert" class="toast toast-danger hidden"><i class="fas fa-exclamation-triangle"></i><span>Suspicious Port Activity Detected!</span></div>
+  <div id="blacklist-alert-box" class="toast toast-warning hidden"><i class="fas fa-ban"></i><span>Blacklist Match Found!</span></div>
+  <div id="signature-alert-box" class="toast toast-warning hidden"><i class="fas fa-shield-virus"></i><span>Signature Match Found</span></div>
+  <div id="manipulate-success-box" class="toast toast-success hidden"><i class="fas fa-check-circle"></i><span>Packet Edited Successfully</span></div>
+
+  <div id="global-loading-overlay" class="loading-overlay hidden"><div class="loader"></div><p>Scanning Traffic...</p></div>
+  <div id="packet-action-menu" class="context-menu hidden"><button id="packet-edit-btn"><i class="fas fa-edit"></i> Edit</button><button id="packet-delete-btn"><i class="fas fa-trash"></i> Delete</button><button id="packet-raw-btn"><i class="fas fa-code"></i> View Raw</button></div>
+
+  <div id="country-detail-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-city"></i> <span id="country-name-modal">Country</span> Details</h3>
+        <button class="close-btn" id="close-country-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div id="country-cities-list">Loading cities...</div>
+    </div>
+</div>
+
+<div id="killchain-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-crosshairs"></i> ATT&CK Kill Chain: <span id="killchain-host">Unknown</span></h3>
+        <button class="close-btn" id="close-killchain">&times;</button>
+    </div>
+    <div class="modal-body" id="killchain-content">
+        <div class="killchain-container">
+        </div>
+        <div class="killchain-legend">
+            <span class="phase-dot completed">●</span> Completed
+            <span class="phase-dot pending">○</span> Pending
+        </div>
+    </div>
+</div>
+
+<div id="packet-drilldown-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-network-wired"></i> Packet Drilldown</h3>
+        <button class="close-btn" id="close-drilldown">&times;</button>
+    </div>
+    <div class="modal-body" id="drilldown-content">
+        Loading...
+    </div>
+</div>
+
+<div id="payload-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-file-alt"></i> Packet Payload</h3>
+        <button class="close-btn" id="close-payload-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <pre id="payload-content" style="white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto; background: var(--dark); padding: 12px; border-radius: 8px; font-size: 13px;"></pre>
+    </div>
+</div>
+
+<div id="fp-modal" class="modal hidden">
+    <div class="modal-header">
+        <h3><i class="fas fa-flag"></i> False Positive Reason</h3>
+        <button class="close-btn" id="close-fp-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <p style="margin-bottom: 12px;">Please provide a reason for marking this alert as a false positive:</p>
+        <textarea id="fp-reason-input" rows="3" class="modal-textarea" placeholder="e.g., This is a known benign service..."></textarea>
+        <div class="button-group" style="margin-top: 16px; justify-content: flex-end;">
+            <button id="fp-cancel-btn" class="btn-secondary">Cancel</button>
+            <button id="fp-confirm-btn" class="btn-primary">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="replay-modal" class="modal hidden" style="max-width: 700px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-history"></i> Attack Timeline Replay</h3>
+        <button class="close-btn" id="close-replay-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div class="replay-controls">
+            <button id="replay-play" class="control-btn play" title="Play"><i class="fas fa-play"></i></button>
+            <button id="replay-pause" class="control-btn pause" title="Pause"><i class="fas fa-pause"></i></button>
+            <button id="replay-stop" class="control-btn stop" title="Stop"><i class="fas fa-stop"></i></button>
+            <button id="replay-restart" class="control-btn restart" title="Restart"><i class="fas fa-sync-alt"></i></button>
+            <div class="replay-speed">
+                <label for="replay-speed-select">Speed:</label>
+                <select id="replay-speed-select" class="mode-select">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="5" selected>5x</option>
+                    <option value="10">10x</option>
+                </select>
+            </div>
+            <span id="replay-progress-text">0 / 0</span>
+        </div>
+        <div class="replay-progress-bar">
+            <div id="replay-progress-fill" class="replay-progress-fill" style="width:0%;"></div>
+        </div>
+        <input type="range" id="replay-scrubber" min="0" max="100" value="0" class="replay-scrubber">
+        <div id="replay-events-container" class="replay-events-container">
+            <div class="replay-empty">No events to replay.</div>
+        </div>
+        <div id="replay-killchain" class="drilldown-chain" style="margin: 8px 0;"></div>
+    </div>
+</div>
+
+<div id="case-modal" class="modal hidden" style="max-width: 600px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-folder-plus"></i> <span id="case-modal-title">New Case</span></h3>
+        <button class="close-btn" id="close-case-modal">&times;</button>
+    </div>
+    <form id="case-form">
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="case-title">Title *</label>
+                <input type="text" id="case-title" class="modal-input" placeholder="e.g., Suspicious activity on host X" required>
+            </div>
+              <div class="form-row">
+                  <div class="form-group">
+                      <label for="case-severity">Severity</label>
+                      <select id="case-severity" class="modal-select">
+                          <option value="critical">Critical</option>
+                          <option value="high" selected>High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                      </select>
+                      
+                  <div class="form-group">
+                      <label for="case-priority">Priority</label>
+                      <select id="case-priority" class="modal-select">
+                          <option value="P1">P1 – Critical</option>
+                          <option value="P2" selected>P2 – High</option>
+                          <option value="P3">P3 – Medium</option>
+                          <option value="P4">P4 – Low</option>
+                      </select>
+                  </div>
+              </div>
+                <div class="form-group">
+                    <label for="case-status">Status</label>
+                    <select id="case-status" class="modal-select">
+                        <option value="open">Open</option>
+                        <option value="investigating">Investigating</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="case-assigned">Assigned To</label>
+                <input type="text" id="case-assigned" class="modal-input" placeholder="Analyst name">
+            </div>
+            <div class="form-group">
+                <label for="case-description">Description</label>
+                <textarea id="case-description" rows="3" class="modal-textarea" placeholder="Describe the case..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="case-alerts-select">Link Alerts</label>
+                <select id="case-alerts-select" class="modal-select" multiple style="height: 100px;">
+                </select>
+                <small style="color: var(--text-muted);">Hold Ctrl/Cmd to select multiple alerts.</small>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" id="cancel-case-btn" class="btn-secondary">Cancel</button>
+            <button type="submit" id="save-case-btn" class="btn-primary">Save Case</button>
+        </div>
+    </form>
+</div>
+
+<div id="case-detail-modal" class="modal hidden" style="max-width: 700px;">
+    <div class="modal-header">
+        <h3 id="case-detail-title">Case #1</h3>
+        <button class="close-btn" id="close-case-detail-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div id="case-detail-content">
+        </div>
+        <hr style="border-color: var(--border); margin: 16px 0;">
+
+    <div id="case-recommendations-container" style="margin: 16px 0 24px 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-robot" style="color: var(--primary);"></i>
+                AI Incident Playbook
+                <span id="rec-confidence-badge" class="badge" style="margin-left: 8px; background: rgba(99,102,241,0.2); color: var(--primary);">
+                    Confidence <span id="rec-confidence-score">—</span>%
+                </span>
+            </h4>
+            <button id="rec-refresh-btn" class="btn-text" style="font-size: 12px;" title="Refresh recommendations">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        <div id="case-recommendations-list" style="background: var(--surface-light); border-radius: 12px; padding: 16px; border: 1px solid var(--border); min-height: 60px;">
+            <div style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 8px 0;">
+                <i class="fas fa-spinner fa-spin"></i> Generating incident playbook...
+            </div>
+        </div>
+    </div>
+        <div>
+            <h4>Notes</h4>
+            <div id="case-notes-list"></div>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="text" id="case-note-input" class="modal-input" placeholder="Add a note..." style="flex:1;">
+                <button id="case-add-note-btn" class="btn-secondary">Add Note</button>
+            </div>
+        </div>
+        <div style="margin-top: 16px;">
+            <button id="case-detail-close" class="btn-primary">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="ioc-modal" class="modal hidden" style="max-width: 550px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-plus-circle"></i> <span id="ioc-modal-title">Add IOC</span></h3>
+        <button class="close-btn" id="close-ioc-modal">&times;</button>
+    </div>
+    <form id="ioc-form">
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ioc-type">Type *</label>
+                    <select id="ioc-type" class="modal-select" required>
+                        <option value="ip">IP</option>
+                        <option value="domain">Domain</option>
+                        <option value="hash">File Hash</option>
+                        <option value="asn">ASN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ioc-severity">Severity</label>
+                    <select id="ioc-severity" class="modal-select">
+                        <option value="critical">Critical</option>
+                        <option value="high" selected>High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="ioc-value">Value *</label>
+                <input type="text" id="ioc-value" class="modal-input" placeholder="e.g., 185.220.101.1" required>
+            </div>
+            <div class="form-group">
+                <label for="ioc-description">Description</label>
+                <textarea id="ioc-description" rows="2" class="modal-textarea" placeholder="Optional context..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ioc-expires">Expires</label>
+                    <input type="datetime-local" id="ioc-expires" class="modal-input">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap: 8px;">
+                    <label>
+                        <input type="checkbox" id="ioc-auto-block"> Auto-block
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="button" id="toggle-bulk-import" class="btn-secondary" style="width:100%;">Bulk Import</button>
+                <div id="bulk-import-area" style="display:none; margin-top: 8px;">
+                    <textarea id="bulk-import-text" rows="4" class="modal-textarea" placeholder="Paste one IOC per line, e.g.:&#10;185.220.101.1&#10;evil.com&#10;d41d8cd98f00b204e9800998ecf8427e"></textarea>
+                    <small style="color: var(--text-muted);">Each line: type:value:description? (default type=ip, severity=high)</small>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" id="cancel-ioc-btn" class="btn-secondary">Cancel</button>
+            <button type="submit" id="save-ioc-btn" class="btn-primary">Save IOC</button>
+        </div>
+    </form>
+</div>
+
+<div id="ioc-hits-modal" class="modal hidden" style="max-width: 700px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-list"></i> IOC Hits: <span id="ioc-hits-title">(value)</span></h3>
+        <button class="close-btn" id="close-ioc-hits-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div id="ioc-intel-summary" style="background: var(--surface-light); border-radius: 12px; padding: 16px; margin-bottom: 16px; border-left: 4px solid var(--primary);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <i class="fas fa-brain" style="color: var(--primary); font-size: 20px;"></i>
+                <span style="font-weight: 700; font-size: 16px;">AI Threat Intelligence Summary</span>
+            </div>
+            <div id="ioc-summary-content">
+            </div>
+        </div>
+        <div id="ioc-hits-content">
+            <p>Loading hits...</p>
+        </div>
+    </div>
+</div>
+
+<div id="confirm-modal" class="modal hidden" style="max-width: 450px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-exclamation-triangle"></i> <span id="confirm-modal-title">Confirm</span></h3>
+        <button class="close-btn" id="close-confirm-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <p id="confirm-modal-message">Are you sure?</p>
+        <div class="button-group" style="justify-content: flex-end; margin-top: 20px;">
+            <button id="confirm-cancel-btn" class="btn-secondary">Cancel</button>
+            <button id="confirm-ok-btn" class="btn-primary">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="rule-modal" class="modal hidden" style="max-width: 800px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-edit"></i> <span id="rule-modal-title">New Rule</span></h3>
+        <button class="close-btn" id="close-rule-modal">&times;</button>
+    </div>
+    <form id="rule-form">
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rule-name">Rule Name *</label>
+                    <input type="text" id="rule-name" class="modal-input" placeholder="e.g., RDP Brute Force" required>
+                </div>
+                <div class="form-group">
+                    <label for="rule-severity">Severity</label>
+                    <select id="rule-severity" class="modal-select">
+                        <option value="critical">Critical</option>
+                        <option value="high" selected>High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rule-confidence">Confidence (%)</label>
+                    <input type="number" id="rule-confidence" class="modal-input" min="0" max="100" value="85">
+                </div>
+                <div class="form-group">
+                    <label for="rule-cooldown">Cooldown (seconds)</label>
+                    <input type="number" id="rule-cooldown" class="modal-input" min="0" value="60">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rule-category">Category</label>
+                    <select id="rule-category" class="modal-select">
+                        <option value="Recon">Reconnaissance</option>
+                        <option value="Initial Access">Initial Access</option>
+                        <option value="Command & Control">Command & Control</option>
+                        <option value="Exfiltration">Exfiltration</option>
+                        <option value="Malware">Malware</option>
+                        <option value="Credential Access">Credential Access</option>
+                        <option value="Other" selected>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rule-mitre">MITRE Technique (e.g., T1046)</label>
+                    <input type="text" id="rule-mitre" class="modal-input" placeholder="T1046">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="rule-message">Alert Message</label>
+                <input type="text" id="rule-message" class="modal-input" placeholder="e.g., Possible RDP brute force" value="Rule matched">
+            </div>
+            <div class="form-group">
+                <label>Match Mode</label>
+                <select id="rule-match-mode" class="modal-select">
+                    <option value="AND">ALL conditions must match (AND)</option>
+                    <option value="OR">ANY condition matches (OR)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Conditions</label>
+                <div id="conditions-container">
+                </div>
+                <button type="button" id="add-condition-btn" class="btn-secondary" style="margin-top: 8px;"><i class="fas fa-plus"></i> Add Condition</button>
+            </div>
+            <div class="form-group">
+                <label>Actions</label>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <label><input type="checkbox" id="action-alert" checked disabled> Alert (always on)</label>
+                    <label><input type="checkbox" id="action-block-ip"> Block Source IP</label>
+                    <label><input type="checkbox" id="action-quarantine"> Quarantine Host</label>
+                    <label><input type="checkbox" id="action-add-ioc"> Add as IOC</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="rule-enabled" checked> Rule Enabled
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" id="cancel-rule-btn" class="btn-secondary">Cancel</button>
+            <button type="submit" id="save-rule-btn" class="btn-primary">Save Rule</button>
+        </div>
+    </form>
+</div>
+
+<div id="policy-modal" class="modal hidden" style="max-width: 700px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-cogs"></i> <span id="policy-modal-title">New Policy</span></h3>
+        <button class="close-btn" id="close-policy-modal">&times;</button>
+    </div>
+    <form id="policy-form">
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Policy Name *</label>
+                <input type="text" id="policy-name" class="modal-input" placeholder="e.g., Block High Confidence C2">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="policy-description" class="modal-input" placeholder="Optional">
+            </div>
+            <div class="form-group">
+              <label>Priority (1 = highest)</label>
+              <select id="policy-priority" class="modal-select">
+                  <option value="1">1 – Highest</option>
+                  <option value="2" selected>2 – High</option>
+                  <option value="3">3 – Medium</option>
+                  <option value="4">4 – Low</option>
+                  <option value="5">5 – Lowest</option>
+              </select>
+          </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Confidence Min</label>
+                    <input type="number" id="policy-conf-min" class="modal-input" min="0" max="100" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Confidence Max</label>
+                    <input type="number" id="policy-conf-max" class="modal-input" min="0" max="100" value="100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Severities</label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <label><input type="checkbox" class="policy-sev" value="low" checked> Low</label>
+                    <label><input type="checkbox" class="policy-sev" value="medium" checked> Medium</label>
+                    <label><input type="checkbox" class="policy-sev" value="high" checked> High</label>
+                    <label><input type="checkbox" class="policy-sev" value="critical" checked> Critical</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Event Types (comma-separated, leave empty for all)</label>
+                <input type="text" id="policy-event-types" class="modal-input" placeholder="e.g., IOC Match, Brute Force">
+            </div>
+            <div class="form-group">
+                <label>Actions</label>
+                <div id="policy-actions-container">
+                </div>
+                <button type="button" id="add-action-row" class="btn-secondary" style="margin-top:8px;"><i class="fas fa-plus"></i> Add Action</button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cooldown (seconds)</label>
+                    <input type="number" id="policy-cooldown" class="modal-input" value="300">
+                </div>
+                <div class="form-group">
+                    <label>Expires After (seconds, 0 = never)</label>
+                    <input type="number" id="policy-expires" class="modal-input" value="3600">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="policy-auto-execute" checked> Auto-execute</label>
+                <span style="margin-left:16px;font-size:12px;color:var(--text-muted);">If unchecked, actions require manual approval.</span>
+            </div>
+
+            <div class="form-group">
+            <label><input type="checkbox" id="policy-simulate-only"> Simulation Mode</label>
+            <span style="margin-left:16px;font-size:12px;color:var(--text-muted);">Logs what would happen without actually executing.</span>
+        </div>
+
+            <div class="form-group">
+                <label><input type="checkbox" id="policy-enabled" checked> Policy Enabled</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="cancel-policy-btn" class="btn-secondary">Cancel</button>
+            <button type="submit" id="save-policy-btn" class="btn-primary">Save Policy</button>
+        </div>
+    </form>
+</div>
+
+<div id="technique-detail-modal" class="modal hidden" style="max-width: 800px;">
+    <div class="modal-header">
+        <h3 id="technique-detail-title">Technique Details</h3>
+        <button class="close-btn" id="close-technique-detail">&times;</button>
+    </div>
+    <div class="modal-body" id="technique-detail-content">
+    </div>
+</div>
+
+<div id="asset-detail-modal" class="modal hidden" style="max-width: 800px;">
+    <div class="modal-header">
+        <h3 id="asset-detail-title">Asset Detail</h3>
+        <button class="close-btn" id="close-asset-detail">&times;</button>
+    </div>
+    <div class="modal-body" id="asset-detail-content">
+        <div class="asset-detail-loading">Loading...</div>
+    </div>
+</div>
+
+<div id="asset-modal" class="modal hidden" style="max-width: 600px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-server"></i> <span id="asset-modal-title">Add Asset</span></h3>
+        <button class="close-btn" id="close-asset-modal">&times;</button>
+    </div>
+    <form id="asset-form">
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="asset-ip">IP Address *</label>
+                <input type="text" id="asset-ip" class="modal-input" placeholder="192.168.1.10" required>
+            </div>
+            <div class="form-group">
+                <label for="asset-hostname">Hostname</label>
+                <input type="text" id="asset-hostname" class="modal-input" placeholder="Finance-PC">
+            </div>
+            <div class="form-group">
+                <label for="asset-owner">Owner</label>
+                <input type="text" id="asset-owner" class="modal-input" placeholder="Finance Department">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="asset-risk">Risk Score</label>
+                    <input type="number" id="asset-risk" class="modal-input" min="0" max="100" step="0.1" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="asset-criticality">Criticality</label>
+                    <select id="asset-criticality" class="modal-select">
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="asset-os">Operating System</label>
+                <input type="text" id="asset-os" class="modal-input" placeholder="e.g., Windows 11, Ubuntu 24.04">
+            </div>
+            <div class="form-group">
+                <label for="asset-tags">Tags (comma-separated)</label>
+                <input type="text" id="asset-tags" class="modal-input" placeholder="Finance, Server, Production">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="asset-status">Status</label>
+                    <select id="asset-status" class="modal-select">
+                        <option value="Healthy">Healthy</option>
+                        <option value="Under Investigation">Under Investigation</option>
+                        <option value="Quarantined">Quarantined</option>
+                        <option value="Blocked">Blocked</option>
+                        <option value="Offline">Offline</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="asset-alerts">Alert Count</label>
+                    <input type="number" id="asset-alerts" class="modal-input" min="0" value="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" id="cancel-asset-btn" class="btn-secondary">Cancel</button>
+            <button type="submit" id="save-asset-btn" class="btn-primary">Save Asset</button>
+        </div>
+    </form>
+</div>
+
+<div id="alert-investigation-modal" class="modal hidden" style="max-width: 950px;">
+    <div class="modal-header">
+        <h3 id="alert-investigation-title">Alert Investigation</h3>
+        <button class="close-btn" id="close-alert-investigation">&times;</button>
+    </div>
+    <div class="modal-body" id="alert-investigation-content">
+        <div class="investigation-loading">Loading...</div>
+    </div>
+</div>
+
+<div id="ueba-detail-modal" class="modal hidden" style="max-width: 700px;">
+    <div class="modal-header">
+        <h3 id="ueba-detail-title">UEBA Details</h3>
+        <button class="close-btn" id="close-ueba-detail">&times;</button>
+    </div>
+    <div class="modal-body" id="ueba-detail-content">
+        <div class="ueba-detail-loading">Loading...</div>
+    </div>
+</div>
+
+<div id="raw-packet-modal" class="modal hidden" style="max-width: 950px;">
+    <div class="modal-header">
+        <h3><i class="fas fa-code"></i> Raw Packet View</h3>
+        <button class="close-btn" id="close-raw-modal">&times;</button>
+    </div>
+    <div class="modal-body" id="raw-packet-content">
+        <div class="raw-packet-loading">Loading...</div>
+    </div>
+</div>
+
+<div id="incident-detail-modal" class="modal hidden" style="max-width: 800px;">
+    <div class="modal-header">
+        <h3 id="incident-detail-title">Incident #</h3>
+        <button class="close-btn" id="close-incident-detail">&times;</button>
+    </div>
+    <div class="modal-body" id="incident-detail-content"></div>
+</div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+  <script src="{{url_for('static', filename='NetworkTrafficAnalyser.js') }}"></script>
+</body>
+</html>
